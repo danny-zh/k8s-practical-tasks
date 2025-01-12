@@ -1,0 +1,175 @@
+# RED
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: red-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: red-color
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: red-color
+  labels:
+    app: red-color
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: red-color
+  template:
+    metadata:
+      labels:
+        app: red-color
+    spec:
+      containers:
+      - name: main
+        image: sbeliakou/color:v1
+        ports:
+        - containerPort: 80
+        env:
+          - name: COLOR
+            value: red
+---
+# GREEN
+apiVersion: v1
+kind: Service
+metadata:
+  name: green-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: green-color
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: green-color
+  labels:
+    app: green-color
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: green-color
+  template:
+    metadata:
+      labels:
+        app: green-color
+    spec:
+      containers:
+      - name: main
+        image: sbeliakou/color:v1
+        ports:
+        - containerPort: 80
+        env:
+          - name: COLOR
+            value: green
+---
+# YELLOW
+apiVersion: v1
+kind: Service
+metadata:
+  name: yellow-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: yellow-color
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yellow-color
+  labels:
+    app: yellow-color
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: yellow-color
+  template:
+    metadata:
+      labels:
+        app: yellow-color
+    spec:
+      containers:
+      - name: main
+        image: sbeliakou/color:v1
+        ports:
+        - containerPort: 80
+        env:
+          - name: COLOR
+            value: yellow
+---
+#SWITCH
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: switch
+spec:
+  type: ClusterIP
+  selector:
+    app: yellow-color
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+#Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lights-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host:  lights.k8slab.net
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: switch
+            port:
+              number: 80
+      - path: /red
+        pathType: Exact
+        backend:
+          service:
+            name: red-svc
+            port:
+              number: 8080
+      - path: /green
+        pathType: Exact
+        backend:
+          service:
+            name: green-svc
+            port:
+              number: 8080
+      - path: /yellow
+        pathType: Exact
+        backend:
+          service:
+            name: yellow-svc
+            port:
+              number: 8080
+      

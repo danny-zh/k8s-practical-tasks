@@ -1,0 +1,41 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: fuchsia-color
+  name: fuchsia-svc
+  namespace: trouble-3
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: fuchsia-color
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: fuchsia
+  name: fuchsia-color
+  namespace: trouble-3
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fuchsia-color
+  template:
+    metadata:
+      labels:
+        app: fuchsia-color
+    spec:
+      containers:
+      - env:
+        - name: COLOR
+          value: fuchsia
+        image: sbeliakou/color:v1
+        imagePullPolicy: IfNotPresent
+        name: webapp-color
