@@ -51,3 +51,4 @@
 - Task 4, 111ms, secret phrase: "MNyfrU1jVnM8PTCR1CTtIC3Gh"
 - Task 5, 105ms, secret phrase: "fLHjgfDpPJylQHiArYc1U01ZJ"
 - Task 6, 545ms, secret phrase: "HxDP1xK5jQOoVika9tSfWId7r"
+- Task 7, 1.069s, secret phrase: "d0dHsfcY5fg7gUS2GuoE9UNXy"
