@@ -1,137 +1,220 @@
+---
 # RED
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: red-svc
-spec:
-  type: ClusterIP
-  selector:
-    app: red-color
-  ports:
-    - protocol: TCP
-      port: 8080
-      targetPort: 80
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: red-color
+  namespace: default
   labels:
     app: red-color
+    color: light
 spec:
   replicas: 3
   selector:
     matchLabels:
       app: red-color
+      color: light
   template:
     metadata:
       labels:
         app: red-color
+        color: light
     spec:
       containers:
-      - name: main
+      - name: red-color
         image: sbeliakou/color:v1
-        ports:
-        - containerPort: 80
         env:
-          - name: COLOR
-            value: red
+        - name: COLOR
+          value: red
+        ports:
+        - containerPort: 8080  # Exposed port for red-color container
 ---
-# GREEN
 apiVersion: v1
 kind: Service
 metadata:
-  name: green-svc
+  name: red-svc
+  namespace: default
 spec:
-  type: ClusterIP
   selector:
-    app: green-color
+    app: red-color
+    color: light
   ports:
-    - protocol: TCP
-      port: 8080
-      targetPort: 80
+  - protocol: TCP
+    port: 8080
+    targetPort: 80
+  type: ClusterIP
 ---
+# GREEN
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: green-color
+  namespace: default
   labels:
     app: green-color
+    color: light
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: green-color
+      color: light
   template:
     metadata:
       labels:
         app: green-color
+        color: light
     spec:
       containers:
-      - name: main
+      - name: green-color
         image: sbeliakou/color:v1
-        ports:
-        - containerPort: 80
         env:
-          - name: COLOR
-            value: green
+        - name: COLOR
+          value: green
+        ports:
+        - containerPort: 8080  # Exposed port for green-color container
 ---
-# YELLOW
 apiVersion: v1
 kind: Service
 metadata:
-  name: yellow-svc
+  name: green-svc
+  namespace: default
 spec:
-  type: ClusterIP
   selector:
-    app: yellow-color
+    app: green-color
+    color: light
   ports:
-    - protocol: TCP
-      port: 8080
-      targetPort: 80
+  - protocol: TCP
+    port: 8080
+    targetPort: 80
+  type: ClusterIP
 ---
+# YELLOW
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: yellow-color
+  namespace: default
   labels:
     app: yellow-color
+    color: light
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: yellow-color
+      color: light
   template:
     metadata:
       labels:
         app: yellow-color
+        color: light
     spec:
       containers:
-      - name: main
+      - name: yellow-color
         image: sbeliakou/color:v1
-        ports:
-        - containerPort: 80
         env:
-          - name: COLOR
-            value: yellow
----
-#SWITCH
+        - name: COLOR
+          value: yellow
+        ports:
+        - containerPort: 8080  # Exposed port for yellow-color container
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: switch
+  name: yellow-svc
+  namespace: default
 spec:
-  type: ClusterIP
   selector:
     app: yellow-color
+    color: light
   ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 80
+  - protocol: TCP
+    port: 8080
+    targetPort: 80
+  type: ClusterIP
 ---
-#Ingress
+apiVersion: v1
+kind: Service #Create service for the switch deployment
+metadata:
+  name: switch
+spec:
+  selector:
+    app: switch
+    color: light  
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: ClusterIP
+---
+apiVersion: v1 #Create configmap to create a customed centralized managed nginx.conf for the switch deployment
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: default
+data: #Define the custom configuration of nginx.conf to route requests to the color services
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+ 
+    http {
+        # Define an upstream block to load balance between the backends
+        upstream color_backend {
+            server red-svc:8080;
+            server green-svc:8080;
+            server yellow-svc:8080;
+        }
+ 
+        server {
+            listen 80;
+ 
+            # Route requests to / to the color_backend which load balances among the services
+            location = / {
+                proxy_pass http://color_backend;
+            }
+ 
+            # Optional: Return 404 for unmatched paths
+            location / {
+                return 404;
+            }
+        }
+    }
+---
+# Create the switch deployment using nginx image and mount the nginx.conf from the ConfigMap to achieve routing of requests to the color services
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: switch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: switch
+      color: light
+  template:
+    metadata:
+      labels:
+        app: switch
+        color: light
+    spec:
+      containers:
+        - name: switch
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf  # Mounts the nginx.conf from the ConfigMap as the NGINX configuration file
+      volumes:
+        - name: config
+          configMap:
+            name: nginx-config  # The ConfigMap name containing nginx.conf
+---
+#Create the ingress to route requests to the switch service
+# lights-ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -141,35 +224,34 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host:  lights.k8slab.net
+  - host: lights.k8slab.net
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: switch
+            name: switch  # Routes to all color pods
             port:
               number: 80
       - path: /red
-        pathType: Exact
+        pathType: Prefix
         backend:
           service:
             name: red-svc
             port:
               number: 8080
       - path: /green
-        pathType: Exact
+        pathType: Prefix
         backend:
           service:
             name: green-svc
             port:
               number: 8080
       - path: /yellow
-        pathType: Exact
+        pathType: Prefix
         backend:
           service:
             name: yellow-svc
             port:
               number: 8080
-      
