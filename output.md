@@ -47,7 +47,7 @@
 
 - Task 1, 1.077s, secret phrase: "paROpZ8Knn1FSnoeiNY0XhOac"
 - Task 2, 178ms, secret phrase: "m6hOzMskF2E5qxUwFNdJ4Nd7F"
-
+- Task 3, 4.038s, secret phrase: "673XzDdBflrUhn66MycthKfV2"
 - Task 4, 111ms, secret phrase: "MNyfrU1jVnM8PTCR1CTtIC3Gh"
 - Task 5, 105ms, secret phrase: "fLHjgfDpPJylQHiArYc1U01ZJ"
 - Task 6, 545ms, secret phrase: "HxDP1xK5jQOoVika9tSfWId7r"
